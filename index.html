@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>向量画板</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      height: 100vh;
+      height: 100dvh;
+      background: #f5f5f5;
+      color: #333;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .canvas-wrap {
+      flex: 1;
+      background: #fff;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .info-bar {
+      flex-shrink: 0;
+      background: #fff;
+      padding: 6px 16px;
+      font-size: 12px;
+      color: #9b59b6;
+      border-top: 1px solid #eee;
+    }
+
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .info-table td {
+      width: 50%;
+      text-align: left;
+      padding: 1px 0;
+    }
+
+    .vl {
+      color: #f39c12;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .controls {
+      flex-shrink: 0;
+      background: #fff;
+      padding: 12px 16px;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-top: 1px solid #eee;
+    }
+
+    .group {
+      background: #f8f8f8;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .group-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .field {
+      flex: 1;
+    }
+
+    .field label {
+      display: block;
+      font-size: 10px;
+      color: #999;
+      margin-bottom: 2px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      outline: none;
+      -webkit-appearance: none;
+      background: #fff;
+    }
+
+    .field input:focus {
+      border-color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="info-bar" id="infoBar"></div>
+
+  <div class="controls">
+    <div class="group">
+      <div class="group-title">
+        <span class="dot" style="background:#e74c3c;"></span> 向量 A
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>长度 (IPs)</label>
+          <input type="number" id="valA" value="0.5" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>角度 (0~360°)</label>
+          <input type="number" id="angA" value="90" step="0.1" min="0" max="360">
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">
+        <span class="dot" style="background:#2ecc71;"></span> 向量 B
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>长度 (IPs)</label>
+          <input type="number" id="valB" value="0.7" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>角度 (0~360°)</label>
+          <input type="number" id="angB" value="120" step="0.1" min="0" max="360">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const inputValA = document.getElementById('valA');
+    const inputAngA = document.getElementById('angA');
+    const inputValB = document.getElementById('valB');
+    const inputAngB = document.getElementById('angB');
+
+    const dpr = window.devicePixelRatio || 1;
+
+    function resize() {
+      const wrap = canvas.parentElement;
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      draw();
+    }
+
+    function degToRad(deg) {
+      return (deg * Math.PI) / 180;
+    }
+
+    function draw() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const scale = Math.min(cx, cy) / 1.2;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 坐标轴
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 1 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, h);
+      ctx.moveTo(0, cy);
+      ctx.lineTo(w, cy);
+      ctx.stroke();
+
+      // 刻度标记
+      ctx.fillStyle = '#ccc';
+      ctx.font = `${10 * dpr}px sans-serif`;
+      ctx.textAlign = 'center';
+      const step = 0.2 * scale;
+      const maxR = Math.min(cx, cy) - 10 * dpr;
+      for (let r = step; r <= maxR; r += step) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = '#f0f0f0';
+        ctx.stroke();
+        ctx.fillText((r / scale).toFixed(1), cx + r, cy + 14 * dpr);
+      }
+
+      // 箭头
+      ctx.fillStyle = '#999';
+      ctx.beginPath();
+      ctx.moveTo(w, cy);
+      ctx.lineTo(w - 8 * dpr, cy - 4 * dpr);
+      ctx.lineTo(w - 8 * dpr, cy + 4 * dpr);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx - 4 * dpr, 8 * dpr);
+      ctx.lineTo(cx + 4 * dpr, 8 * dpr);
+      ctx.fill();
+
+      // 原点标记
+      ctx.fillStyle = '#999';
+      ctx.fillText('O', cx - 10 * dpr, cy + 14 * dpr);
+
+      // 计算端点
+      const a = getEndpoint(inputValA.value, inputAngA.value, scale, cx, cy);
+      const b = getEndpoint(inputValB.value, inputAngB.value, scale, cx, cy);
+
+      // 画向量 A
+      drawVector(cx, cy, a.x, a.y, '#e74c3c', 'A', parseFloat(inputValA.value) || 0, parseFloat(inputAngA.value) || 0);
+      // 画向量 B
+      drawVector(cx, cy, b.x, b.y, '#2ecc71', 'B', parseFloat(inputValB.value) || 0, parseFloat(inputAngB.value) || 0);
+      // 虚线连接 A 末端到 B 末端，展示几何关系
+      const diffLen = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) / scale;
+      const diffAng = Math.atan2(-(b.y - a.y), b.x - a.x) * 180 / Math.PI;
+
+      ctx.strokeStyle = '#bbb';
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.setLineDash([5 * dpr, 5 * dpr]);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // B−A 从原点画出
+      const diffEndX = cx + (b.x - a.x);
+      const diffEndY = cy + (b.y - a.y);
+      drawVector(cx, cy, diffEndX, diffEndY, '#f39c12', 'V', diffLen, diffAng);
+
+      // A 的反向量（虚线）
+      const valA = parseFloat(inputValA.value) || 0;
+      const angA = parseFloat(inputAngA.value) || 0;
+      const negAng = ((angA + 180) % 360 + 360) % 360;
+      const negRad = degToRad(negAng);
+      const negX = cx + valA * Math.cos(negRad) * scale;
+      const negY = cy - valA * Math.sin(negRad) * scale;
+      ctx.setLineDash([6 * dpr, 4 * dpr]);
+      drawVector(cx, cy, negX, negY, '#e74c3c', '−A', valA, negAng);
+      ctx.setLineDash([]);
+
+      // V1~V4，V1/V2 用淡色
+      const rotEndpoints = [];
+      const colors = [null, '#fad7a0', '#fad7a0', '#f39c12', '#f39c12']; // V1,V2淡 V3,V4浓
+      for (let i = 1; i <= 4; i++) {
+        const ang = diffAng - 72 * i;
+        const rad = degToRad(ang);
+        const ex = cx + diffLen * Math.cos(rad) * scale;
+        const ey = cy - diffLen * Math.sin(rad) * scale;
+        rotEndpoints.push({ x: ex, y: ey, ang });
+        drawArrowOnly(cx, cy, ex, ey, colors[i], `V${i}`);
+      }
+
+      // −A 末端到后两根旋转向量的垂线
+      const perpDistances = [];
+      for (let i = 2; i <= 3; i++) {
+        const ep = rotEndpoints[i];
+        const dx = ep.x - cx;
+        const dy = ep.y - cy;
+        const px = negX - cx;
+        const py = negY - cy;
+        const lenSq = dx * dx + dy * dy;
+        const t = (px * dx + py * dy) / lenSq;
+        const footX = cx + t * dx;
+        const footY = cy + t * dy;
+        const perpDist = Math.sqrt((negX - footX) ** 2 + (negY - footY) ** 2) / scale;
+        perpDistances.push(perpDist);
+
+        // 延伸线（t > 1 时从端点延伸到垂足，t < 0 时从原点反向延伸）
+        ctx.strokeStyle = '#f39c12';
+        ctx.lineWidth = 1 * dpr;
+        ctx.setLineDash([4 * dpr, 4 * dpr]);
+        ctx.beginPath();
+        if (t > 1) {
+          ctx.moveTo(ep.x, ep.y);
+          ctx.lineTo(footX, footY);
+        } else if (t < 0) {
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(footX, footY);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 垂线
+        ctx.strokeStyle = '#9b59b6';
+        ctx.lineWidth = 1.5 * dpr;
+        ctx.setLineDash([4 * dpr, 4 * dpr]);
+        ctx.beginPath();
+        ctx.moveTo(negX, negY);
+        ctx.lineTo(footX, footY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 直角标记
+        const markSize = 6 * dpr;
+        const segAngle = Math.atan2(dy, dx);
+        const perpAngle = Math.atan2(negY - footY, negX - footX);
+        ctx.strokeStyle = '#9b59b6';
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(footX, footY);
+        ctx.lineTo(footX + markSize * Math.cos(segAngle), footY + markSize * Math.sin(segAngle));
+        ctx.lineTo(
+          footX + markSize * Math.cos(segAngle) + markSize * Math.cos(perpAngle),
+          footY + markSize * Math.sin(segAngle) + markSize * Math.sin(perpAngle)
+        );
+        ctx.lineTo(footX + markSize * Math.cos(perpAngle), footY + markSize * Math.sin(perpAngle));
+        ctx.stroke();
+
+        // 标注长度
+        const midX = (negX + footX) / 2;
+        const midY = (negY + footY) / 2;
+        ctx.fillStyle = '#9b59b6';
+        ctx.font = `${10 * dpr}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(perpDist.toFixed(3), midX, midY - 4 * dpr);
+      }
+
+      // 更新信息栏
+      document.getElementById('infoBar').innerHTML =
+        `<table class="info-table">` +
+        `<tr><td>−A → <span class="vl">V3</span>: <b>${perpDistances[0].toFixed(4)} IPs</b></td><td>−A → <span class="vl">V4</span>: <b>${perpDistances[1].toFixed(4)} IPs</b></td></tr>` +
+        `<tr><td>−A → <span class="vl">V3</span>: <b>${(perpDistances[0] * 300).toFixed(2)} g</b></td><td>−A → <span class="vl">V4</span>: <b>${(perpDistances[1] * 300).toFixed(2)} g</b></td></tr>` +
+        `</table>`;
+    }
+
+    function getEndpoint(valStr, angStr, scale, cx, cy) {
+      const val = parseFloat(valStr) || 0;
+      const ang = parseFloat(angStr) || 0;
+      const rad = degToRad(ang);
+      return {
+        x: cx + val * Math.cos(rad) * scale,
+        y: cy - val * Math.sin(rad) * scale
+      };
+    }
+
+    function drawVector(sx, sy, ex, ey, color, label, val, ang) {
+      // 画线
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5 * dpr;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      // 箭头
+      const arrowLen = 12 * dpr;
+      const arrowAngle = degToRad(25);
+      const baseAngle = Math.atan2(ey - sy, ex - sx);
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(
+        ex - arrowLen * Math.cos(baseAngle - arrowAngle),
+        ey - arrowLen * Math.sin(baseAngle - arrowAngle)
+      );
+      ctx.lineTo(
+        ex - arrowLen * Math.cos(baseAngle + arrowAngle),
+        ey - arrowLen * Math.sin(baseAngle + arrowAngle)
+      );
+      ctx.closePath();
+      ctx.fill();
+
+      // 标签
+      const labelDist = 16 * dpr;
+      const lx = ex + labelDist * Math.cos(baseAngle);
+      const ly = ey + labelDist * Math.sin(baseAngle);
+      ctx.fillStyle = color;
+      ctx.font = `bold ${13 * dpr}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, lx, ly);
+
+      // 数值标注（画在向量中间偏上）
+      const midX = (sx + ex) * 0.5;
+      const midY = (sy + ey) * 0.5;
+      const offsetX = -10 * dpr * Math.sin(baseAngle);
+      const offsetY = -10 * dpr * Math.cos(baseAngle);
+      const angNorm = ((ang % 360) + 360) % 360;
+      ctx.fillStyle = '#666';
+      ctx.font = `${10 * dpr}px sans-serif`;
+      ctx.fillText(`|${label}|=${val.toFixed(1)} IPs  ${angNorm.toFixed(1)}°`, midX + offsetX, midY + offsetY);
+    }
+
+    function drawArrowOnly(sx, sy, ex, ey, color, label) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2 * dpr;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      const arrowLen = 10 * dpr;
+      const arrowAngle = degToRad(25);
+      const baseAngle = Math.atan2(ey - sy, ex - sx);
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(
+        ex - arrowLen * Math.cos(baseAngle - arrowAngle),
+        ey - arrowLen * Math.sin(baseAngle - arrowAngle)
+      );
+      ctx.lineTo(
+        ex - arrowLen * Math.cos(baseAngle + arrowAngle),
+        ey - arrowLen * Math.sin(baseAngle + arrowAngle)
+      );
+      ctx.closePath();
+      ctx.fill();
+
+      if (label) {
+        const labelDist = 16 * dpr;
+        const lx = ex + labelDist * Math.cos(baseAngle);
+        const ly = ey + labelDist * Math.sin(baseAngle);
+        ctx.fillStyle = color;
+        ctx.font = `bold ${12 * dpr}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, lx, ly);
+      }
+    }
+
+    window.addEventListener('resize', resize);
+
+    [inputValA, inputAngA, inputValB, inputAngB].forEach(el => {
+      el.addEventListener('input', draw);
+    });
+
+    resize();
+  </script>
+</body>
+</html>
