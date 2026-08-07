@@ -142,11 +142,11 @@
   <div class="controls">
     <div class="group">
       <div class="group-title">
-        <span class="dot" style="background:#e74c3c;"></span> 向量 A
+        <span class="dot" style="background:#e74c3c;"></span> 第一次
       </div>
       <div class="row">
         <div class="field">
-          <label>长度 (IPs)</label>
+          <label>振动 (IPs)</label>
           <input type="number" id="valA" value="0.5" step="0.01" min="0">
         </div>
         <div class="field">
@@ -158,11 +158,11 @@
 
     <div class="group">
       <div class="group-title">
-        <span class="dot" style="background:#2ecc71;"></span> 向量 B
+        <span class="dot" style="background:#2ecc71;"></span> 第二次
       </div>
       <div class="row">
         <div class="field">
-          <label>长度 (IPs)</label>
+          <label>振动 (IPs)</label>
           <input type="number" id="valB" value="0.7" step="0.01" min="0">
         </div>
         <div class="field">
@@ -254,9 +254,9 @@
       const b = getEndpoint(inputValB.value, inputAngB.value, scale, cx, cy);
 
       // 画向量 A
-      drawVector(cx, cy, a.x, a.y, '#e74c3c', 'A', parseFloat(inputValA.value) || 0, parseFloat(inputAngA.value) || 0);
+      drawVector(cx, cy, a.x, a.y, '#e74c3c', '第一次', parseFloat(inputValA.value) || 0, parseFloat(inputAngA.value) || 0);
       // 画向量 B
-      drawVector(cx, cy, b.x, b.y, '#2ecc71', 'B', parseFloat(inputValB.value) || 0, parseFloat(inputAngB.value) || 0);
+      drawVector(cx, cy, b.x, b.y, '#2ecc71', '第二次', parseFloat(inputValB.value) || 0, parseFloat(inputAngB.value) || 0);
       // 虚线连接 A 末端到 B 末端，展示几何关系
       const diffLen = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) / scale;
       const diffAng = Math.atan2(-(b.y - a.y), b.x - a.x) * 180 / Math.PI;
@@ -283,7 +283,7 @@
       const negX = cx + valA * Math.cos(negRad) * scale;
       const negY = cy - valA * Math.sin(negRad) * scale;
       ctx.setLineDash([6 * dpr, 4 * dpr]);
-      drawVector(cx, cy, negX, negY, '#e74c3c', '−A', valA, negAng);
+      drawVector(cx, cy, negX, negY, '#e74c3c', '−第一次', valA, negAng);
       ctx.setLineDash([]);
 
       // V1~V4，V1/V2 用淡色
@@ -367,8 +367,8 @@
       // 更新信息栏
       document.getElementById('infoBar').innerHTML =
         `<table class="info-table">` +
-        `<tr><td>−A → <span class="vl">V3</span>: <b>${perpDistances[0].toFixed(4)} IPs</b></td><td>−A → <span class="vl">V4</span>: <b>${perpDistances[1].toFixed(4)} IPs</b></td></tr>` +
-        `<tr><td>−A → <span class="vl">V3</span>: <b>${(perpDistances[0] * 300).toFixed(2)} g</b></td><td>−A → <span class="vl">V4</span>: <b>${(perpDistances[1] * 300).toFixed(2)} g</b></td></tr>` +
+        `<tr><td>−第一次 → <span class="vl">V3</span>: <b>${perpDistances[0].toFixed(4)} IPs</b></td><td>−第一次 → <span class="vl">V4</span>: <b>${perpDistances[1].toFixed(4)} IPs</b></td></tr>` +
+        `<tr><td>−第一次 → <span class="vl">V3</span>: <b>${(perpDistances[0] * 300).toFixed(2)} g</b></td><td>−第一次 → <span class="vl">V4</span>: <b>${(perpDistances[1] * 300).toFixed(2)} g</b></td></tr>` +
         `</table>`;
     }
 
