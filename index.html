@@ -171,6 +171,19 @@
         </div>
       </div>
     </div>
+
+    <div class="group">
+      <div class="group-title">
+        <span class="dot" style="background:#f39c12;"></span> V组颜色
+      </div>
+      <div class="row">
+        <div class="field"><label>V</label><input type="color" id="colorV" value="#f39c12"></div>
+        <div class="field"><label>V1</label><input type="color" id="colorV1" value="#fad7a0"></div>
+        <div class="field"><label>V2</label><input type="color" id="colorV2" value="#fad7a0"></div>
+        <div class="field"><label>V3</label><input type="color" id="colorV3" value="#f39c12"></div>
+        <div class="field"><label>V4</label><input type="color" id="colorV4" value="#f39c12"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -181,6 +194,11 @@
     const inputAngA = document.getElementById('angA');
     const inputValB = document.getElementById('valB');
     const inputAngB = document.getElementById('angB');
+    const inputColorV = document.getElementById('colorV');
+    const inputColorV1 = document.getElementById('colorV1');
+    const inputColorV2 = document.getElementById('colorV2');
+    const inputColorV3 = document.getElementById('colorV3');
+    const inputColorV4 = document.getElementById('colorV4');
 
     const dpr = window.devicePixelRatio || 1;
 
@@ -254,9 +272,9 @@
       const b = getEndpoint(inputValB.value, inputAngB.value, scale, cx, cy);
 
       // 画向量 A
-      drawVector(cx, cy, a.x, a.y, '#e74c3c', '第一次', parseFloat(inputValA.value) || 0, parseFloat(inputAngA.value) || 0);
+      drawVector(cx, cy, a.x, a.y, '#e74c3c', '第一次', parseFloat(inputValA.value) || 0, parseFloat(inputAngA.value) || 0, 1.5);
       // 画向量 B
-      drawVector(cx, cy, b.x, b.y, '#2ecc71', '第二次', parseFloat(inputValB.value) || 0, parseFloat(inputAngB.value) || 0);
+      drawVector(cx, cy, b.x, b.y, '#2ecc71', '第二次', parseFloat(inputValB.value) || 0, parseFloat(inputAngB.value) || 0, 1.5);
       // 虚线连接 A 末端到 B 末端，展示几何关系
       const diffLen = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) / scale;
       const diffAng = Math.atan2(-(b.y - a.y), b.x - a.x) * 180 / Math.PI;
@@ -273,7 +291,7 @@
       // B−A 从原点画出
       const diffEndX = cx + (b.x - a.x);
       const diffEndY = cy + (b.y - a.y);
-      drawVector(cx, cy, diffEndX, diffEndY, '#f39c12', 'V', diffLen, diffAng);
+      drawVector(cx, cy, diffEndX, diffEndY, inputColorV.value, 'V', diffLen, diffAng, 3);
 
       // A 的反向量（虚线）
       const valA = parseFloat(inputValA.value) || 0;
@@ -283,19 +301,19 @@
       const negX = cx + valA * Math.cos(negRad) * scale;
       const negY = cy - valA * Math.sin(negRad) * scale;
       ctx.setLineDash([6 * dpr, 4 * dpr]);
-      drawVector(cx, cy, negX, negY, '#e74c3c', '−第一次', valA, negAng);
+      drawVector(cx, cy, negX, negY, '#e74c3c', '反向第一次', valA, negAng, 1.5);
       ctx.setLineDash([]);
 
       // V1~V4，V1/V2 用淡色
       const rotEndpoints = [];
-      const colors = [null, '#fad7a0', '#fad7a0', '#f39c12', '#f39c12']; // V1,V2淡 V3,V4浓
+      const colors = [null, inputColorV1.value, inputColorV2.value, inputColorV3.value, inputColorV4.value];
       for (let i = 1; i <= 4; i++) {
         const ang = diffAng - 72 * i;
         const rad = degToRad(ang);
         const ex = cx + diffLen * Math.cos(rad) * scale;
         const ey = cy - diffLen * Math.sin(rad) * scale;
         rotEndpoints.push({ x: ex, y: ey, ang });
-        drawArrowOnly(cx, cy, ex, ey, colors[i], `V${i}`);
+        drawArrowOnly(cx, cy, ex, ey, colors[i], `V${i}`, 3);
       }
 
       // −A 末端到后两根旋转向量的垂线
@@ -367,8 +385,8 @@
       // 更新信息栏
       document.getElementById('infoBar').innerHTML =
         `<table class="info-table">` +
-        `<tr><td>−第一次 → <span class="vl">V3</span>: <b>${perpDistances[0].toFixed(4)} IPs</b></td><td>−第一次 → <span class="vl">V4</span>: <b>${perpDistances[1].toFixed(4)} IPs</b></td></tr>` +
-        `<tr><td>−第一次 → <span class="vl">V3</span>: <b>${(perpDistances[0] * 300).toFixed(2)} g</b></td><td>−第一次 → <span class="vl">V4</span>: <b>${(perpDistances[1] * 300).toFixed(2)} g</b></td></tr>` +
+        `<tr><td>反向第一次 → <span class="vl">V3</span>: <b>${perpDistances[0].toFixed(4)} IPs</b></td><td>反向第一次 → <span class="vl">V4</span>: <b>${perpDistances[1].toFixed(4)} IPs</b></td></tr>` +
+        `<tr><td>反向第一次 → <span class="vl">V3</span>: <b>${(perpDistances[0] * 300).toFixed(2)} g</b></td><td>反向第一次 → <span class="vl">V4</span>: <b>${(perpDistances[1] * 300).toFixed(2)} g</b></td></tr>` +
         `</table>`;
     }
 
@@ -382,10 +400,10 @@
       };
     }
 
-    function drawVector(sx, sy, ex, ey, color, label, val, ang) {
+    function drawVector(sx, sy, ex, ey, color, label, val, ang, lw) {
       // 画线
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2.5 * dpr;
+      ctx.lineWidth = (lw || 2.5) * dpr;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
@@ -432,9 +450,9 @@
       ctx.fillText(`|${label}|=${val.toFixed(1)} IPs  ${angNorm.toFixed(1)}°`, midX + offsetX, midY + offsetY);
     }
 
-    function drawArrowOnly(sx, sy, ex, ey, color, label) {
+    function drawArrowOnly(sx, sy, ex, ey, color, label, lw) {
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2 * dpr;
+      ctx.lineWidth = (lw || 2) * dpr;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
@@ -473,8 +491,19 @@
 
     window.addEventListener('resize', resize);
 
-    [inputValA, inputAngA, inputValB, inputAngB].forEach(el => {
-      el.addEventListener('input', draw);
+    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4];
+
+    // 从 localStorage 恢复所有值
+    allInputs.forEach(el => {
+      const saved = localStorage.getItem('vec-' + el.id);
+      if (saved) el.value = saved;
+    });
+
+    allInputs.forEach(el => {
+      el.addEventListener('input', () => {
+        localStorage.setItem('vec-' + el.id, el.value);
+        draw();
+      });
     });
 
     resize();
