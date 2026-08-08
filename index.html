@@ -337,9 +337,19 @@
         }
       }
 
-      // 在两根 V 向量上计算投影
+      // 检查是否有向量与反向第一次重合（夹角 < 0.01°）
+      let projTargets = pair;
+      const coincident = pair.find(vec => {
+        const diff = Math.abs(negAngNorm - vec.ang);
+        const angle = Math.min(diff, 360 - diff);
+        return angle < 0.01;
+      });
+      // 如果有重合的，只对重合的那个做投影
+      if (coincident) projTargets = [coincident];
+
+      // 在目标 V 向量上计算投影
       const projLengths = [];
-      for (const vec of pair) {
+      for (const vec of projTargets) {
         const dx = vec.ex - cx;
         const dy = vec.ey - cy;
         const px = negX - cx;
@@ -416,13 +426,19 @@
       }
 
       // 更新信息栏
-      const angle1 = Math.acos(Math.max(-1, Math.min(1, projLengths[0].val / valA))) * 180 / Math.PI;
-      const angle2 = Math.acos(Math.max(-1, Math.min(1, projLengths[1].val / valA))) * 180 / Math.PI;
-      document.getElementById('infoBar').innerHTML =
-        `<table class="info-table">` +
-        `<tr><td>投影 反向第一次→<span class="vl">${pair[0].label}</span>: <b>${(projLengths[0].val * 300).toFixed(1)} g</b></td><td>投影 反向第一次→<span class="vl">${pair[1].label}</span>: <b>${(projLengths[1].val * 300).toFixed(1)} g</b></td></tr>` +
-        `<tr><td>夹角 反向第一次→<span class="vl">${pair[0].label}</span>: <b>${angle1.toFixed(1)}°</b></td><td>夹角 反向第一次→<span class="vl">${pair[1].label}</span>: <b>${angle2.toFixed(1)}°</b></td></tr>` +
-        `</table>`;
+      let infoHTML = `<table class="info-table"><tr>`;
+      for (const p of projLengths) {
+        infoHTML += `<td>投影 反向第一次→<span class="vl">${p.label}</span>: <b>${(p.val * 300).toFixed(1)} g</b></td>`;
+      }
+      if (projLengths.length === 1) infoHTML += `<td></td>`;
+      infoHTML += `</tr><tr>`;
+      for (const p of projLengths) {
+        const ang = Math.acos(Math.max(-1, Math.min(1, p.val / valA))) * 180 / Math.PI;
+        infoHTML += `<td>夹角 反向第一次→<span class="vl">${p.label}</span>: <b>${ang.toFixed(1)}°</b></td>`;
+      }
+      if (projLengths.length === 1) infoHTML += `<td></td>`;
+      infoHTML += `</tr></table>`;
+      document.getElementById('infoBar').innerHTML = infoHTML;
     }
 
     function getEndpoint(valStr, angStr, scale, cx, cy) {
