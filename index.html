@@ -304,42 +304,62 @@
       drawVector(cx, cy, negX, negY, '#e74c3c', '反向第一次', valA, negAng, 1.5);
       ctx.setLineDash([]);
 
-      // V1~V4，V1/V2 用淡色
-      const rotEndpoints = [];
-      const colors = [null, inputColorV1.value, inputColorV2.value, inputColorV3.value, inputColorV4.value];
+      // 构建 V, V1~V4 向量列表，归一化角度到 [0, 360)
+      const allV = [];
+      // V
+      allV.push({
+        ang: ((diffAng % 360) + 360) % 360,
+        ex: diffEndX, ey: diffEndY,
+        color: inputColorV.value, label: 'V'
+      });
+      // V1~V4
+      const vColors = [null, inputColorV1.value, inputColorV2.value, inputColorV3.value, inputColorV4.value];
       for (let i = 1; i <= 4; i++) {
         const ang = diffAng - 72 * i;
+        const normAng = ((ang % 360) + 360) % 360;
         const rad = degToRad(ang);
         const ex = cx + diffLen * Math.cos(rad) * scale;
         const ey = cy - diffLen * Math.sin(rad) * scale;
-        rotEndpoints.push({ x: ex, y: ey, ang });
-        drawArrowOnly(cx, cy, ex, ey, colors[i], `V${i}`, 3);
+        allV.push({ ang: normAng, ex, ey, color: vColors[i], label: `V${i}` });
+        drawArrowOnly(cx, cy, ex, ey, vColors[i], `V${i}`, 3);
       }
 
-      // 反向第一次在 V3, V4 上的投影
+      // 按角度排序
+      allV.sort((p, q) => p.ang - q.ang);
+
+      // 找到反向第一次落在哪两个 V 向量之间
+      const negAngNorm = ((negAng % 360) + 360) % 360;
+      let pair = [allV[allV.length - 1], allV[0]]; // 默认最后一根和第一根
+      for (let i = 0; i < allV.length - 1; i++) {
+        if (negAngNorm >= allV[i].ang && negAngNorm <= allV[i + 1].ang) {
+          pair = [allV[i], allV[i + 1]];
+          break;
+        }
+      }
+
+      // 在两根 V 向量上计算投影
       const projLengths = [];
-      for (let i = 2; i <= 3; i++) {
-        const ep = rotEndpoints[i];
-        const dx = ep.x - cx;
-        const dy = ep.y - cy;
+      for (const vec of pair) {
+        const dx = vec.ex - cx;
+        const dy = vec.ey - cy;
         const px = negX - cx;
         const py = negY - cy;
         const lenSq = dx * dx + dy * dy;
         const t = (px * dx + py * dy) / lenSq;
-        // 投影长度 = |P| * cos(θ) = (P·D) / |D|
+        // 投影长度 = (P·D) / |D|
         const projLen = (px * dx + py * dy) / Math.sqrt(lenSq) / scale;
-        projLengths.push(projLen);
+        projLengths.push({ label: vec.label, val: projLen });
 
         const footX = cx + t * dx;
         const footY = cy + t * dy;
 
         // 延伸线（t > 1 时从端点延伸到垂足，t < 0 时从原点反向延伸）
-        ctx.strokeStyle = colors[i + 1];
+        ctx.strokeStyle = vec.color;
         ctx.lineWidth = 1 * dpr;
         ctx.setLineDash([4 * dpr, 4 * dpr]);
         ctx.beginPath();
         if (t > 1) {
-          ctx.moveTo(ep.x, ep.y);
+          ctx.moveTo(vec.ex, vec.ey);
           ctx.lineTo(footX, footY);
         } else if (t < 0) {
           ctx.moveTo(cx, cy);
@@ -392,13 +412,13 @@
         ctx.font = `bold ${10 * dpr}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText((projLen * 300).toFixed(1) + ' g', midX + offsetX, midY + offsetY);
+        ctx.fillText((projLengths[projLengths.length - 1].val * 300).toFixed(1) + ' g', midX + offsetX, midY + offsetY);
       }
 
       // 更新信息栏
       document.getElementById('infoBar').innerHTML =
         `<table class="info-table">` +
-        `<tr><td>投影 反向第一次→<span class="vl">V3</span>: <b>${(projLengths[0] * 300).toFixed(1)} g</b></td><td>投影 反向第一次→<span class="vl">V4</span>: <b>${(projLengths[1] * 300).toFixed(1)} g</b></td></tr>` +
+        `<tr><td>投影 反向第一次→<span class="vl">${pair[0].label}</span>: <b>${(projLengths[0].val * 300).toFixed(1)} g</b></td><td>投影 反向第一次→<span class="vl">${pair[1].label}</span>: <b>${(projLengths[1].val * 300).toFixed(1)} g</b></td></tr>` +
         `</table>`;
     }
 
