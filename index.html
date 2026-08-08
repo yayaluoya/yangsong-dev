@@ -392,14 +392,13 @@
         ctx.font = `bold ${10 * dpr}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(projLen.toFixed(3), midX + offsetX, midY + offsetY);
+        ctx.fillText((projLen * 300).toFixed(1) + ' g', midX + offsetX, midY + offsetY);
       }
 
       // 更新信息栏
       document.getElementById('infoBar').innerHTML =
         `<table class="info-table">` +
-        `<tr><td>投影 反向第一次→<span class="vl">V3</span>: <b>${projLengths[0].toFixed(4)} IPs</b></td><td>投影 反向第一次→<span class="vl">V4</span>: <b>${projLengths[1].toFixed(4)} IPs</b></td></tr>` +
-        `<tr><td>投影 反向第一次→<span class="vl">V3</span>: <b>${(projLengths[0] * 300).toFixed(2)} g</b></td><td>投影 反向第一次→<span class="vl">V4</span>: <b>${(projLengths[1] * 300).toFixed(2)} g</b></td></tr>` +
+        `<tr><td>投影 反向第一次→<span class="vl">V3</span>: <b>${(projLengths[0] * 300).toFixed(1)} g</b></td><td>投影 反向第一次→<span class="vl">V4</span>: <b>${(projLengths[1] * 300).toFixed(1)} g</b></td></tr>` +
         `</table>`;
     }
 
