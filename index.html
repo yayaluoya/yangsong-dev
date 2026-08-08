@@ -316,8 +316,8 @@
         drawArrowOnly(cx, cy, ex, ey, colors[i], `V${i}`, 3);
       }
 
-      // −A 末端到后两根旋转向量的垂线
-      const perpDistances = [];
+      // 反向第一次在 V3, V4 上的投影
+      const projLengths = [];
       for (let i = 2; i <= 3; i++) {
         const ep = rotEndpoints[i];
         const dx = ep.x - cx;
@@ -326,13 +326,15 @@
         const py = negY - cy;
         const lenSq = dx * dx + dy * dy;
         const t = (px * dx + py * dy) / lenSq;
+        // 投影长度 = |P| * cos(θ) = (P·D) / |D|
+        const projLen = (px * dx + py * dy) / Math.sqrt(lenSq) / scale;
+        projLengths.push(projLen);
+
         const footX = cx + t * dx;
         const footY = cy + t * dy;
-        const perpDist = Math.sqrt((negX - footX) ** 2 + (negY - footY) ** 2) / scale;
-        perpDistances.push(perpDist);
 
         // 延伸线（t > 1 时从端点延伸到垂足，t < 0 时从原点反向延伸）
-        ctx.strokeStyle = '#f39c12';
+        ctx.strokeStyle = colors[i + 1];
         ctx.lineWidth = 1 * dpr;
         ctx.setLineDash([4 * dpr, 4 * dpr]);
         ctx.beginPath();
@@ -346,10 +348,19 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // 垂线
+        // 投影向量（从原点到垂足，粗线高亮）
         ctx.strokeStyle = '#9b59b6';
-        ctx.lineWidth = 1.5 * dpr;
-        ctx.setLineDash([4 * dpr, 4 * dpr]);
+        ctx.lineWidth = 2.5 * dpr;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(footX, footY);
+        ctx.stroke();
+
+        // 垂线（从反向第一次末端到垂足，虚线）
+        ctx.strokeStyle = '#9b59b6';
+        ctx.lineWidth = 1.2 * dpr;
+        ctx.setLineDash([3 * dpr, 3 * dpr]);
         ctx.beginPath();
         ctx.moveTo(negX, negY);
         ctx.lineTo(footX, footY);
@@ -357,7 +368,7 @@
         ctx.setLineDash([]);
 
         // 直角标记
-        const markSize = 6 * dpr;
+        const markSize = 5 * dpr;
         const segAngle = Math.atan2(dy, dx);
         const perpAngle = Math.atan2(negY - footY, negX - footX);
         ctx.strokeStyle = '#9b59b6';
@@ -372,21 +383,23 @@
         ctx.lineTo(footX + markSize * Math.cos(perpAngle), footY + markSize * Math.sin(perpAngle));
         ctx.stroke();
 
-        // 标注长度
-        const midX = (negX + footX) / 2;
-        const midY = (negY + footY) / 2;
+        // 标注投影长度
+        const midX = (cx + footX) / 2;
+        const midY = (cy + footY) / 2;
+        const offsetX = -12 * dpr * Math.sin(segAngle);
+        const offsetY = 12 * dpr * Math.cos(segAngle);
         ctx.fillStyle = '#9b59b6';
-        ctx.font = `${10 * dpr}px sans-serif`;
+        ctx.font = `bold ${10 * dpr}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(perpDist.toFixed(3), midX, midY - 4 * dpr);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(projLen.toFixed(3), midX + offsetX, midY + offsetY);
       }
 
       // 更新信息栏
       document.getElementById('infoBar').innerHTML =
         `<table class="info-table">` +
-        `<tr><td>反向第一次 → <span class="vl">V3</span>: <b>${perpDistances[0].toFixed(4)} IPs</b></td><td>反向第一次 → <span class="vl">V4</span>: <b>${perpDistances[1].toFixed(4)} IPs</b></td></tr>` +
-        `<tr><td>反向第一次 → <span class="vl">V3</span>: <b>${(perpDistances[0] * 300).toFixed(2)} g</b></td><td>反向第一次 → <span class="vl">V4</span>: <b>${(perpDistances[1] * 300).toFixed(2)} g</b></td></tr>` +
+        `<tr><td>投影 反向第一次→<span class="vl">V3</span>: <b>${projLengths[0].toFixed(4)} IPs</b></td><td>投影 反向第一次→<span class="vl">V4</span>: <b>${projLengths[1].toFixed(4)} IPs</b></td></tr>` +
+        `<tr><td>投影 反向第一次→<span class="vl">V3</span>: <b>${(projLengths[0] * 300).toFixed(2)} g</b></td><td>投影 反向第一次→<span class="vl">V4</span>: <b>${(projLengths[1] * 300).toFixed(2)} g</b></td></tr>` +
         `</table>`;
     }
 
