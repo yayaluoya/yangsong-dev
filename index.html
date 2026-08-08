@@ -416,9 +416,12 @@
       }
 
       // 更新信息栏
+      const angle1 = Math.acos(Math.max(-1, Math.min(1, projLengths[0].val / valA))) * 180 / Math.PI;
+      const angle2 = Math.acos(Math.max(-1, Math.min(1, projLengths[1].val / valA))) * 180 / Math.PI;
       document.getElementById('infoBar').innerHTML =
         `<table class="info-table">` +
         `<tr><td>投影 反向第一次→<span class="vl">${pair[0].label}</span>: <b>${(projLengths[0].val * 300).toFixed(1)} g</b></td><td>投影 反向第一次→<span class="vl">${pair[1].label}</span>: <b>${(projLengths[1].val * 300).toFixed(1)} g</b></td></tr>` +
+        `<tr><td>夹角 反向第一次→<span class="vl">${pair[0].label}</span>: <b>${angle1.toFixed(1)}°</b></td><td>夹角 反向第一次→<span class="vl">${pair[1].label}</span>: <b>${angle2.toFixed(1)}°</b></td></tr>` +
         `</table>`;
     }
 
