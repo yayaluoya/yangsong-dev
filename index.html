@@ -337,106 +337,74 @@
         }
       }
 
-      // 检查是否有向量与反向第一次重合（夹角 < 0.01°）
-      let projTargets = pair;
-      const coincident = pair.find(vec => {
-        const diff = Math.abs(negAngNorm - vec.ang);
-        const angle = Math.min(diff, 360 - diff);
-        return angle < 0.01;
-      });
-      // 如果有重合的，只对重合的那个做投影
-      if (coincident) projTargets = [coincident];
-
-      // 在目标 V 向量上计算投影
+      // 矢量分解：将反向第一次向量分解到周围两个V向量方向上（力的分解）
       const projLengths = [];
-      for (const vec of projTargets) {
-        const dx = vec.ex - cx;
-        const dy = vec.ey - cy;
-        const px = negX - cx;
-        const py = negY - cy;
-        const lenSq = dx * dx + dy * dy;
-        const t = (px * dx + py * dy) / lenSq;
-        // 投影长度 = (P·D) / |D|
-        const projLen = (px * dx + py * dy) / Math.sqrt(lenSq) / scale;
-        projLengths.push({ label: vec.label, val: projLen });
+      const Px = negX - cx;
+      const Py = negY - cy;
 
-        const footX = cx + t * dx;
-        const footY = cy + t * dy;
+      const [v1, v2] = pair;
+      const dx1 = v1.ex - cx, dy1 = v1.ey - cy;
+      const dx2 = v2.ex - cx, dy2 = v2.ey - cy;
+      const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+      const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
 
-        // 延伸线（t > 1 时从端点延伸到垂足，t < 0 时从原点反向延伸）
-        ctx.strokeStyle = vec.color;
-        ctx.lineWidth = 1 * dpr;
-        ctx.setLineDash([4 * dpr, 4 * dpr]);
-        ctx.beginPath();
-        if (t > 1) {
-          ctx.moveTo(vec.ex, vec.ey);
-          ctx.lineTo(footX, footY);
-        } else if (t < 0) {
-          ctx.moveTo(cx, cy);
-          ctx.lineTo(footX, footY);
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
+      // 单位方向向量
+      const ux = dx1 / len1, uy = dy1 / len1;
+      const vx = dx2 / len2, vy = dy2 / len2;
 
-        // 投影向量（从原点到垂足，粗线高亮）
-        ctx.strokeStyle = '#9b59b6';
-        ctx.lineWidth = 2.5 * dpr;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(footX, footY);
-        ctx.stroke();
+      // Cramer's rule: 解 P = k1·U + k2·V（像素空间）
+      const det = ux * vy - uy * vx;
+      const k1_px = (Px * vy - Py * vx) / det;
+      const k2_px = (ux * Py - uy * Px) / det;
 
-        // 垂线（从反向第一次末端到垂足，虚线）
-        ctx.strokeStyle = '#9b59b6';
-        ctx.lineWidth = 1.2 * dpr;
-        ctx.setLineDash([3 * dpr, 3 * dpr]);
-        ctx.beginPath();
-        ctx.moveTo(negX, negY);
-        ctx.lineTo(footX, footY);
-        ctx.stroke();
-        ctx.setLineDash([]);
+      // 转换到 IPs
+      const k1 = k1_px / scale;
+      const k2 = k2_px / scale;
 
-        // 直角标记
-        const markSize = 5 * dpr;
-        const segAngle = Math.atan2(dy, dx);
-        const perpAngle = Math.atan2(negY - footY, negX - footX);
-        ctx.strokeStyle = '#9b59b6';
-        ctx.lineWidth = 1 * dpr;
-        ctx.beginPath();
-        ctx.moveTo(footX, footY);
-        ctx.lineTo(footX + markSize * Math.cos(segAngle), footY + markSize * Math.sin(segAngle));
-        ctx.lineTo(
-          footX + markSize * Math.cos(segAngle) + markSize * Math.cos(perpAngle),
-          footY + markSize * Math.sin(segAngle) + markSize * Math.sin(perpAngle)
-        );
-        ctx.lineTo(footX + markSize * Math.cos(perpAngle), footY + markSize * Math.sin(perpAngle));
-        ctx.stroke();
+      // 同时计算投影值用于角度计算（角度 = acos(proj / |P|)）
+      const proj1 = (Px * dx1 + Py * dy1) / len1 / scale;
+      const proj2 = (Px * dx2 + Py * dy2) / len2 / scale;
 
-        // 标注投影长度
-        const midX = (cx + footX) / 2;
-        const midY = (cy + footY) / 2;
-        const offsetX = -12 * dpr * Math.sin(segAngle);
-        const offsetY = 12 * dpr * Math.cos(segAngle);
-        ctx.fillStyle = '#9b59b6';
-        ctx.font = `bold ${10 * dpr}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText((projLengths[projLengths.length - 1].val * 300).toFixed(1) + ' g', midX + offsetX, midY + offsetY);
-      }
+      projLengths.push({ label: v1.label, val: k1, proj: proj1 });
+      projLengths.push({ label: v2.label, val: k2, proj: proj2 });
+
+      // 绘制两个分量向量
+      const comp1EndX = cx + k1_px * ux;
+      const comp1EndY = cy + k1_px * uy;
+      const comp2EndX = cx + k2_px * vx;
+      const comp2EndY = cy + k2_px * vy;
+
+      // 分量向量的统一颜色
+      const compColor = '#9b59b6';
+
+      drawArrowOnly(cx, cy, comp1EndX, comp1EndY, compColor, null, 2.5);
+      drawArrowOnly(cx, cy, comp2EndX, comp2EndY, compColor, null, 2.5);
+
+      // 补全平行四边形（虚线）
+      ctx.strokeStyle = compColor;
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.setLineDash([4 * dpr, 4 * dpr]);
+      ctx.beginPath();
+      ctx.moveTo(comp1EndX, comp1EndY);
+      ctx.lineTo(negX, negY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(comp2EndX, comp2EndY);
+      ctx.lineTo(negX, negY);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
       // 更新信息栏
       let infoHTML = `<table class="info-table"><tr>`;
       for (const p of projLengths) {
-        infoHTML += `<td>投影 反向第一次→<span class="vl">${p.label}</span>: <b>${(p.val * 300).toFixed(1)} g</b></td>`;
+        infoHTML += `<td>分解 反向第一次→<span class="vl">${p.label}</span>: <b>${(p.val * 300).toFixed(1)} g</b></td>`;
       }
-      if (projLengths.length === 1) infoHTML += `<td></td>`;
       infoHTML += `</tr><tr>`;
       for (const p of projLengths) {
-        const ang = Math.acos(Math.max(-1, Math.min(1, p.val / valA))) * 180 / Math.PI;
+        const ang = Math.acos(Math.max(-1, Math.min(1, p.proj / valA))) * 180 / Math.PI;
         infoHTML += `<td>夹角 反向第一次→<span class="vl">${p.label}</span>: <b>${ang.toFixed(1)}°</b></td>`;
       }
-      if (projLengths.length === 1) infoHTML += `<td></td>`;
       infoHTML += `</tr></table>`;
       document.getElementById('infoBar').innerHTML = infoHTML;
     }
@@ -552,6 +520,10 @@
 
     allInputs.forEach(el => {
       el.addEventListener('input', () => {
+        // valA / valB 不允许负数
+        if ((el.id === 'valA' || el.id === 'valB') && parseFloat(el.value) < 0) {
+          el.value = '0';
+        }
         localStorage.setItem('vec-' + el.id, el.value);
         draw();
       });
