@@ -169,6 +169,10 @@
           <label>角度 (0~360°)</label>
           <input type="number" id="angB" value="120" step="0.1" min="0" max="360">
         </div>
+        <div class="field">
+          <label>克数</label>
+          <input type="number" id="gramsB" value="0" step="1" min="0">
+        </div>
       </div>
     </div>
 
@@ -194,6 +198,7 @@
     const inputAngA = document.getElementById('angA');
     const inputValB = document.getElementById('valB');
     const inputAngB = document.getElementById('angB');
+    const inputGramsB = document.getElementById('gramsB');
     const inputColorV = document.getElementById('colorV');
     const inputColorV1 = document.getElementById('colorV1');
     const inputColorV2 = document.getElementById('colorV2');
@@ -396,9 +401,11 @@
       ctx.setLineDash([]);
 
       // 更新信息栏
+      const gramsB = parseFloat(inputGramsB.value) || 0;
+      const gMul = diffLen > 0 ? gramsB / diffLen : 0;
       let infoHTML = `<table class="info-table"><tr>`;
       for (const p of projLengths) {
-        infoHTML += `<td>分解 反向第一次→<span class="vl">${p.label}</span>: <b>${(p.val * 300).toFixed(1)} g</b></td>`;
+        infoHTML += `<td>分解 反向第一次→<span class="vl">${p.label}</span>: <b>${(p.val * gMul).toFixed(1)} g</b></td>`;
       }
       infoHTML += `</tr><tr>`;
       for (const p of projLengths) {
@@ -510,7 +517,7 @@
 
     window.addEventListener('resize', resize);
 
-    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4];
+    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4];
 
     // 从 localStorage 恢复所有值
     allInputs.forEach(el => {
