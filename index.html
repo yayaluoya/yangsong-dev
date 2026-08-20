@@ -214,6 +214,18 @@
   <div class="controls">
     <div class="group">
       <div class="group-title">
+        <span class="dot" style="background:#667eea;"></span> 显示范围
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>坐标轴最大刻度（半径）</label>
+          <input type="number" id="rangeMax" value="1" step="0.1" min="0.1">
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">
         <span class="dot" style="background:#e74c3c;"></span> 第一次
       </div>
       <div class="row">
@@ -286,6 +298,7 @@
     const inputColorV2 = document.getElementById('colorV2');
     const inputColorV3 = document.getElementById('colorV3');
     const inputColorV4 = document.getElementById('colorV4');
+    const inputRangeMax = document.getElementById('rangeMax');
 
     const dpr = window.devicePixelRatio || 1;
 
@@ -304,12 +317,18 @@
       return (deg * Math.PI) / 180;
     }
 
+    function fmtTick(v) {
+      const r = Math.round(v * 100) / 100;
+      return String(r);
+    }
+
     function draw() {
       const w = canvas.width;
       const h = canvas.height;
       const cx = w / 2;
       const cy = h / 2;
-      const scale = Math.min(cx, cy) / 1.2;
+      const rangeMax = Math.max(0.1, parseFloat(inputRangeMax.value) || 1);
+      const scale = Math.min(cx, cy) / (rangeMax * 1.2);
 
       ctx.clearRect(0, 0, w, h);
 
@@ -327,14 +346,15 @@
       ctx.fillStyle = '#ccc';
       ctx.font = `${10 * dpr}px sans-serif`;
       ctx.textAlign = 'center';
-      const step = 0.2 * scale;
-      const maxR = Math.min(cx, cy) - 10 * dpr;
-      for (let r = step; r <= maxR; r += step) {
+      const segs = 5;
+      const step = (rangeMax * scale) / segs;
+      for (let i = 1; i <= segs; i++) {
+        const r = step * i;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.strokeStyle = '#f0f0f0';
         ctx.stroke();
-        ctx.fillText((r / scale).toFixed(1), cx + r, cy + 14 * dpr);
+        ctx.fillText(fmtTick(r / scale), cx + r, cy + 14 * dpr);
       }
 
       // 箭头
@@ -645,7 +665,7 @@
 
     window.addEventListener('resize', resize);
 
-    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4];
+    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4, inputRangeMax];
 
     // 从 localStorage 恢复所有值
     allInputs.forEach(el => {
