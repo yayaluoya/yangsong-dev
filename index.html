@@ -133,7 +133,7 @@
     }
 
     .btn-calc {
-      width: 100%;
+      flex: 1;
       padding: 8px;
       font-size: 12px;
       border: none;
@@ -143,22 +143,6 @@
       cursor: pointer;
     }
     .btn-calc:active {
-      background: #f3eef8;
-    }
-
-    .btn-reset {
-      flex-shrink: 0;
-      align-self: flex-end;
-      padding: 6px 12px;
-      font-size: 12px;
-      border: 1px solid #e0e0e0;
-      background: #fff;
-      color: #9b59b6;
-      border-radius: 6px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .btn-reset:active {
       background: #f3eef8;
     }
 
@@ -231,19 +215,6 @@
   <div class="controls">
     <div class="group">
       <div class="group-title">
-        <span class="dot" style="background:#667eea;"></span> 显示范围
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>坐标轴最大刻度（半径）</label>
-          <input type="number" id="rangeMax" value="1" step="0.1" min="0.1">
-        </div>
-        <button class="btn-reset" onclick="resetView()">重置视图</button>
-      </div>
-    </div>
-
-    <div class="group">
-      <div class="group-title">
         <span class="dot" style="background:#e74c3c;"></span> 第一次
       </div>
       <div class="row">
@@ -278,27 +249,51 @@
       </div>
     </div>
 
-    <div class="group">
-      <div class="group-title">
-        <span class="dot" style="background:#f39c12;"></span> V组颜色
-      </div>
-      <div class="row">
-        <div class="field"><label>V</label><input type="color" id="colorV" value="#f39c12"></div>
-        <div class="field"><label>V1</label><input type="color" id="colorV1" value="#fad7a0"></div>
-        <div class="field"><label>V2</label><input type="color" id="colorV2" value="#fad7a0"></div>
-        <div class="field"><label>V3</label><input type="color" id="colorV3" value="#f39c12"></div>
-        <div class="field"><label>V4</label><input type="color" id="colorV4" value="#f39c12"></div>
-      </div>
+    <div class="row">
+      <button class="btn-calc" onclick="resetView()">重置视图</button>
+      <button class="btn-calc" onclick="showCalc()">查看计算过程</button>
+      <button class="btn-calc" onclick="showSettings()">设置</button>
     </div>
-
-    <button class="btn-calc" onclick="showCalc()">查看计算过程</button>
-    <div style="text-align:center;font-size:10px;color:#ccc;padding-top:4px;">v1.1.0</div>
   </div>
 
   <div class="modal-overlay" id="modalOverlay" onclick="closeCalc(event)">
     <div class="modal-box" onclick="event.stopPropagation()">
       <h3>计算过程 <button class="modal-close" onclick="closeCalc()">✕</button></h3>
       <div class="modal-body"><div id="modalContent"></div></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settingsOverlay" onclick="closeSettings(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3>设置 <button class="modal-close" onclick="closeSettings()">✕</button></h3>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="group">
+          <div class="group-title">
+            <span class="dot" style="background:#667eea;"></span> 显示范围
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>坐标轴最大刻度（半径）</label>
+              <input type="number" id="rangeMax" value="1" step="0.1" min="0.1">
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-title">
+            <span class="dot" style="background:#f39c12;"></span> V组颜色
+          </div>
+          <div class="row">
+            <div class="field"><label>V</label><input type="color" id="colorV" value="#f39c12"></div>
+            <div class="field"><label>V1</label><input type="color" id="colorV1" value="#fad7a0"></div>
+            <div class="field"><label>V2</label><input type="color" id="colorV2" value="#fad7a0"></div>
+            <div class="field"><label>V3</label><input type="color" id="colorV3" value="#f39c12"></div>
+            <div class="field"><label>V4</label><input type="color" id="colorV4" value="#f39c12"></div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:10px;color:#ccc;padding-top:4px;">v1.1.0</div>
+      </div>
     </div>
   </div>
 
@@ -682,6 +677,15 @@
     function closeCalc(e) {
       if (e && e.target !== document.getElementById('modalOverlay')) return;
       document.getElementById('modalOverlay').classList.remove('show');
+    }
+
+    function showSettings() {
+      document.getElementById('settingsOverlay').classList.add('show');
+    }
+
+    function closeSettings(e) {
+      if (e && e.target !== document.getElementById('settingsOverlay')) return;
+      document.getElementById('settingsOverlay').classList.remove('show');
     }
 
     window.addEventListener('resize', resize);
