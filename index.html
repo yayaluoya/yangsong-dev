@@ -522,6 +522,13 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
+      // 标注反向第一次与两个分量 V 向量的夹角
+      const arcR1 = Math.min(0.05 * scale, valA * scale * 0.4);
+      const arcR2 = Math.min(0.09 * scale, valA * scale * 0.4);
+      const thetaP = Math.atan2(negY - cy, negX - cx);
+      drawAngleArc(cx, cy, arcR1, thetaP, Math.atan2(v1.ey - cy, v1.ex - cx), v1.color);
+      drawAngleArc(cx, cy, arcR2, thetaP, Math.atan2(v2.ey - cy, v2.ex - cx), v2.color);
+
       // 文字标注统一在最上层绘制
       for (const l of labels) {
         drawLabel(l.text, l.x, l.y, l.color, l.fontPx, l.bold);
@@ -570,6 +577,26 @@
       ctx.fillRect(x - w / 2 - padX, y - h / 2 - padY, w + 2 * padX, h + 2 * padY);
       ctx.fillStyle = color;
       ctx.fillText(text, x, y);
+    }
+
+    function drawAngleArc(cx, cy, r, startAng, endAng, color) {
+      let delta = endAng - startAng;
+      while (delta > Math.PI) delta -= 2 * Math.PI;
+      while (delta < -Math.PI) delta += 2 * Math.PI;
+      const ccw = delta < 0;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.setLineDash([3 * dpr, 3 * dpr]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, startAng, endAng, ccw);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const deg = Math.abs(delta) * 180 / Math.PI;
+      const midAng = startAng + delta / 2;
+      const lx = cx + (r + 10 * dpr) * Math.cos(midAng);
+      const ly = cy + (r + 10 * dpr) * Math.sin(midAng);
+      labels.push({ text: `${deg.toFixed(1)}°`, x: lx, y: ly, color: color, fontPx: 9, bold: false });
     }
 
     function getEndpoint(valStr, angStr, scale, cx, cy) {
