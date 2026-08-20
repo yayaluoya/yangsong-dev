@@ -318,6 +318,9 @@
     // 视图变换状态：平移偏移（物理像素）与缩放系数
     let offsetX = 0, offsetY = 0, zoom = 1;
 
+    // 文字标注（标签/数值）统一收集，最后在最上层绘制
+    let labels = [];
+
     function resize() {
       const wrap = canvas.parentElement;
       const w = wrap.clientWidth;
@@ -347,6 +350,7 @@
       const scale = (Math.min(w, h) / 2) / (rangeMax * 1.2) * zoom;
 
       ctx.clearRect(0, 0, w, h);
+      labels = [];
 
       // 坐标轴
       ctx.strokeStyle = '#ddd';
@@ -518,6 +522,11 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
+      // 文字标注统一在最上层绘制
+      for (const l of labels) {
+        drawLabel(l.text, l.x, l.y, l.color, l.fontPx, l.bold);
+      }
+
       // 更新信息栏
       const gramsB = parseFloat(inputGramsB.value) || 0;
       const gMul = diffLen > 0 ? gramsB / diffLen : 0;
@@ -546,6 +555,21 @@
         k1, k2, proj1, proj2, gMul,
         allV: allV
       };
+    }
+
+    function drawLabel(text, x, y, color, fontPx, bold) {
+      const fs = fontPx * dpr;
+      ctx.font = `${bold ? 'bold ' : ''}${fs}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const w = ctx.measureText(text).width;
+      const h = fs * 1.2;
+      const padX = 5 * dpr;
+      const padY = 3 * dpr;
+      ctx.fillStyle = 'rgba(255,255,255,0.72)';
+      ctx.fillRect(x - w / 2 - padX, y - h / 2 - padY, w + 2 * padX, h + 2 * padY);
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
     }
 
     function getEndpoint(valStr, angStr, scale, cx, cy) {
@@ -591,21 +615,15 @@
       const labelDist = 16 * dpr;
       const lx = ex + labelDist * Math.cos(baseAngle);
       const ly = ey + labelDist * Math.sin(baseAngle);
-      ctx.fillStyle = color;
-      ctx.font = `bold ${13 * dpr}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, lx, ly);
+      labels.push({ text: label, x: lx, y: ly, color: color, fontPx: 13, bold: true });
 
       // 数值标注（画在向量中间偏上）
       const midX = (sx + ex) * 0.5;
       const midY = (sy + ey) * 0.5;
-      const offsetX = -10 * dpr * Math.sin(baseAngle);
-      const offsetY = -10 * dpr * Math.cos(baseAngle);
+      const tagX = -10 * dpr * Math.sin(baseAngle);
+      const tagY = -10 * dpr * Math.cos(baseAngle);
       const angNorm = ((ang % 360) + 360) % 360;
-      ctx.fillStyle = '#666';
-      ctx.font = `${10 * dpr}px sans-serif`;
-      ctx.fillText(`|${label}|=${val.toFixed(1)} IPs  ${angNorm.toFixed(1)}°`, midX + offsetX, midY + offsetY);
+      labels.push({ text: `|${label}|=${val.toFixed(1)} IPs  ${angNorm.toFixed(1)}°`, x: midX + tagX, y: midY + tagY, color: '#666', fontPx: 10, bold: false });
     }
 
     function drawArrowOnly(sx, sy, ex, ey, color, label, lw) {
@@ -639,11 +657,7 @@
         const labelDist = 16 * dpr;
         const lx = ex + labelDist * Math.cos(baseAngle);
         const ly = ey + labelDist * Math.sin(baseAngle);
-        ctx.fillStyle = color;
-        ctx.font = `bold ${12 * dpr}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(label, lx, ly);
+        labels.push({ text: label, x: lx, y: ly, color: color, fontPx: 12, bold: true });
       }
     }
 
