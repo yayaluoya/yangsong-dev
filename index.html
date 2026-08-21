@@ -117,18 +117,23 @@
       margin-bottom: 2px;
     }
 
-    .field input {
+    .field input,
+    .field select {
       width: 100%;
       padding: 6px 8px;
       font-size: 14px;
       border: 1px solid #e0e0e0;
       border-radius: 6px;
       outline: none;
-      -webkit-appearance: none;
       background: #fff;
     }
 
-    .field input:focus {
+    .field input {
+      -webkit-appearance: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
       border-color: #667eea;
     }
 
@@ -246,6 +251,13 @@
           <label>克数</label>
           <input type="number" id="gramsB" value="0" step="1" min="0">
         </div>
+        <div class="field">
+          <label>增减</label>
+          <select id="gramsMode">
+            <option value="add">增重</option>
+            <option value="remove">减重</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -306,6 +318,7 @@
     const inputValB = document.getElementById('valB');
     const inputAngB = document.getElementById('angB');
     const inputGramsB = document.getElementById('gramsB');
+    const inputGramsMode = document.getElementById('gramsMode');
     const inputColorV = document.getElementById('colorV');
     const inputColorV1 = document.getElementById('colorV1');
     const inputColorV2 = document.getElementById('colorV2');
@@ -403,8 +416,12 @@
       // 画向量 B
       drawVector(cx, cy, b.x, b.y, '#2ecc71', '第二次', parseFloat(inputValB.value) || 0, parseFloat(inputAngB.value) || 0, 1.5);
       // 虚线连接 A 末端到 B 末端，展示几何关系
-      const diffLen = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) / scale;
-      const diffAng = Math.atan2(-(b.y - a.y), b.x - a.x) * 180 / Math.PI;
+      // 增重/减重：减重时把 V = B−A 反向（即 A−B）
+      const modeSign = inputGramsMode.value === 'remove' ? -1 : 1;
+      const dx = (b.x - a.x) * modeSign;
+      const dy = (b.y - a.y) * modeSign;
+      const diffLen = Math.sqrt(dx * dx + dy * dy) / scale;
+      const diffAng = Math.atan2(-dy, dx) * 180 / Math.PI;
 
       ctx.strokeStyle = '#bbb';
       ctx.lineWidth = 1.5 * dpr;
@@ -415,9 +432,9 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // B−A 从原点画出
-      const diffEndX = cx + (b.x - a.x);
-      const diffEndY = cy + (b.y - a.y);
+      // B−A（减重时反向）从原点画出
+      const diffEndX = cx + dx;
+      const diffEndY = cy + dy;
       drawVector(cx, cy, diffEndX, diffEndY, inputColorV.value, 'V', diffLen, diffAng, 3);
 
       // A 的反向量（虚线）
@@ -555,6 +572,8 @@
         valB: parseFloat(inputValB.value) || 0,
         angB: parseFloat(inputAngB.value) || 0,
         gramsB,
+        mode: inputGramsMode.value,
+        modeLabel: inputGramsMode.value === 'remove' ? '减重' : '增重',
         diffLen, diffAng: ((diffAng % 360) + 360) % 360,
         negAng, negAngNorm,
         v1Label: v1.label, v1Ang: v1.ang,
@@ -694,7 +713,7 @@
       const steps = [
         { t: '输入',
           v: `第一次：大小 ${d.valA} IPs，方向 ${d.angA}°<br>第二次：大小 ${d.valB} IPs，方向 ${d.angB}°<br>克数 = ${d.gramsB}` },
-        { t: '1. V = 第二次 − 第一次',
+        { t: d.mode === 'remove' ? '1. V = 第一次 − 第二次（减重）' : '1. V = 第二次 − 第一次',
           v: `V 长度 = ${d.diffLen.toFixed(2)} IPs，V 方向 = ${d.diffAng.toFixed(1)}°` },
         { t: '2. 反向第一次 P',
           v: `方向 = ${d.negAng.toFixed(1)}°，大小 = ${d.valA} IPs` },
@@ -731,7 +750,7 @@
 
     window.addEventListener('resize', resize);
 
-    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4, inputRangeMax];
+    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputGramsMode, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4, inputRangeMax];
 
     // 从 localStorage 恢复所有值
     allInputs.forEach(el => {
