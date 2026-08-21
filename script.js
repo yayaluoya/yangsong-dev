@@ -555,3 +555,9 @@ canvas.addEventListener('wheel', (e) => {
 canvas.addEventListener('dblclick', resetView);
 
 resize();
+
+// 首次打开自动弹出设置弹窗，并用 localStorage 记录，之后不再自动弹
+if (!localStorage.getItem('vec-first-open')) {
+  showSettings();
+  localStorage.setItem('vec-first-open', '1');
+}
