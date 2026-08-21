@@ -129,11 +129,11 @@ function draw() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // V1（减重时反向）从原点画出
+  // V1 桨叶（减重时反向）从原点画出
   const diffEndX = cx + dx;
   const diffEndY = cy + dy;
   const nameV = vLabel(inputNameV, '桨叶1');
-  drawVector(cx, cy, diffEndX, diffEndY, inputColorV.value, nameV, diffLen, diffAng, 3);
+  drawBlade(cx, cy, diffEndX, diffEndY, inputColorV.value, nameV);
 
   // A 的反向量（虚线）
   const valA = parseFloat(inputValA.value) || 0;
@@ -164,7 +164,7 @@ function draw() {
     const ex = cx + diffLen * Math.cos(rad) * scale;
     const ey = cy - diffLen * Math.sin(rad) * scale;
     allV.push({ ang: normAng, ex, ey, color: vColors[i], label: vNames[i], isMain: false });
-    drawArrowOnly(cx, cy, ex, ey, vColors[i], vNames[i], 3);
+    drawBlade(cx, cy, ex, ey, vColors[i], vNames[i]);
   }
 
   // 按角度排序
@@ -402,6 +402,107 @@ function drawArrowOnly(sx, sy, ex, ey, color, label, lw) {
 
   if (label) {
     const labelDist = 16 * dpr;
+    const lx = ex + labelDist * Math.cos(baseAngle);
+    const ly = ey + labelDist * Math.sin(baseAngle);
+    labels.push({ text: label, x: lx, y: ly, fontPx: 12, bold: true });
+  }
+}
+
+// 噪点纹理：懒生成并缓存，打破桨叶纯色的生硬感
+let bladeNoise = null;
+function bladeNoisePattern() {
+  if (bladeNoise) return bladeNoise;
+  const size = 128;
+  const nc = document.createElement('canvas');
+  nc.width = size;
+  nc.height = size;
+  const nctx = nc.getContext('2d');
+  const data = nctx.createImageData(size, size);
+  for (let i = 0; i < data.data.length; i += 4) {
+    const v = (Math.random() * 255) | 0;
+    data.data[i] = v;
+    data.data[i + 1] = v;
+    data.data[i + 2] = v;
+    data.data[i + 3] = (Math.random() * 255) | 0;
+  }
+  nctx.putImageData(data, 0, 0);
+  bladeNoise = ctx.createPattern(nc, 'repeat');
+  return bladeNoise;
+}
+
+function drawBlade(sx, sy, ex, ey, color, label) {
+  const L = Math.hypot(ex - sx, ey - sy);
+  if (L < 1) return;
+  const ux = (ex - sx) / L;
+  const uy = (ey - sy) / L;
+  const px = -uy; // 单位垂直方向
+  const py = ux;
+
+  // 桨叶半宽与长度成正比，随缩放同步变化，保持叶片比例一致
+  const wMax = L * 0.04;
+  const rTip = wMax * 0.6; // 尖端圆头半径
+
+  // 圆头圆心：末端往回退 rTip，让圆头正好凸在叶尖
+  const cx0 = ex - ux * rTip;
+  const cy0 = ey - uy * rTip;
+
+  // 圆头与叶片相接的上/下两点
+  const topX = cx0 + px * rTip, topY = cy0 + py * rTip;
+  const botX = cx0 - px * rTip, botY = cy0 - py * rTip;
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy); // 根部（原点）
+
+  // 上边缘：根部 → 圆头上接点（三次贝塞尔，中段鼓起、端点切线沿轴向，与圆头平滑相接）
+  ctx.bezierCurveTo(
+    sx + ux * L * 0.40 + px * wMax * 1.4, sy + uy * L * 0.40 + py * wMax * 1.4,
+    topX - ux * L * 0.16, topY - uy * L * 0.16,
+    topX, topY
+  );
+
+  // 尖端圆头：从上接点经最外点(ex,ey)到下接点（半圆弧，切向连续）
+  ctx.arc(cx0, cy0, rTip, Math.atan2(py, px), Math.atan2(py, px) - Math.PI, true);
+
+  // 下边缘：圆头下接点 → 根部
+  ctx.bezierCurveTo(
+    botX - ux * L * 0.16, botY - uy * L * 0.16,
+    sx + ux * L * 0.40 - px * wMax * 1.4, sy + uy * L * 0.40 - py * wMax * 1.4,
+    sx, sy
+  );
+
+  ctx.closePath();
+
+  // 投影：柔和的下方阴影，让桨叶看起来浮在画布上
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.22)';
+  ctx.shadowBlur = 5 * dpr;
+  ctx.shadowOffsetX = 1.5 * dpr;
+  ctx.shadowOffsetY = 2 * dpr;
+  ctx.fill();
+  ctx.restore();
+
+  // 立体渐变：沿叶片宽度方向叠加高光与暗面，模拟圆柱/翼型曲面
+  const g = ctx.createLinearGradient(
+    sx - px * wMax, sy - py * wMax,
+    sx + px * wMax, sy + py * wMax
+  );
+  g.addColorStop(0, 'rgba(0,0,0,0.16)');
+  g.addColorStop(0.5, 'rgba(255,255,255,0)');
+  g.addColorStop(1, 'rgba(255,255,255,0.32)');
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  // 噪点叠加：随机颗粒打破纯色的生硬感
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = bladeNoisePattern();
+  ctx.fill();
+  ctx.restore();
+
+  if (label) {
+    const labelDist = 18 * dpr;
+    const baseAngle = Math.atan2(ey - sy, ex - sx);
     const lx = ex + labelDist * Math.cos(baseAngle);
     const ly = ey + labelDist * Math.sin(baseAngle);
     labels.push({ text: label, x: lx, y: ly, fontPx: 12, bold: true });
