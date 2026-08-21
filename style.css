@@ -137,6 +137,12 @@ canvas {
   margin-top: 4px;
 }
 
+.field input[type="color"] {
+  height: 34px;
+  padding: 2px;
+  cursor: pointer;
+}
+
 .field input:focus,
 .field select:focus {
   border-color: #667eea;
