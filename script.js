@@ -311,9 +311,26 @@ function drawLabel(text, x, y, fontPx, bold) {
   const h = fs * 1.2;
   const padX = 5 * dpr;
   const padY = 3 * dpr;
-  // 标注统一用深灰文字 + 白底，颜色区分交给向量线条本身
-  ctx.fillStyle = 'rgba(255,255,255,0.72)';
-  ctx.fillRect(x - w / 2 - padX, y - h / 2 - padY, w + 2 * padX, h + 2 * padY);
+  // 标注统一用深灰文字 + 白底，颜色区分交给向量线条本身；白底加投影让标注更突出
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.28)';
+  ctx.shadowBlur = 4 * dpr;
+  ctx.shadowOffsetY = 1.5 * dpr;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  const bx = x - w / 2 - padX;
+  const by = y - h / 2 - padY;
+  const bw = w + 2 * padX;
+  const bh = h + 2 * padY;
+  const br = Math.min(6 * dpr, bw / 2, bh / 2); // 圆角半径，不超过宽高一半
+  ctx.beginPath();
+  ctx.moveTo(bx + br, by);
+  ctx.arcTo(bx + bw, by, bx + bw, by + bh, br);
+  ctx.arcTo(bx + bw, by + bh, bx, by + bh, br);
+  ctx.arcTo(bx, by + bh, bx, by, br);
+  ctx.arcTo(bx, by, bx + bw, by, br);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
   ctx.fillStyle = '#333';
   ctx.fillText(text, x, y);
 }
@@ -459,7 +476,7 @@ function drawBlade(sx, sy, ex, ey, color, label) {
 
   // 桨叶半宽与长度成正比，随缩放同步变化，保持叶片比例一致
   const wMax = L * 0.04;
-  const rTip = wMax * 0.6; // 尖端圆头半径
+  const rTip = wMax; // 叶尖圆头半径（放大，让圆头更明显、不发尖）
 
   // 圆头圆心：末端往回退 rTip，让圆头正好凸在叶尖
   const cx0 = ex - ux * rTip;
