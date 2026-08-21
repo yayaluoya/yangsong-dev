@@ -132,6 +132,10 @@
       -webkit-appearance: none;
     }
 
+    .field input + input {
+      margin-top: 4px;
+    }
+
     .field input:focus,
     .field select:focus {
       border-color: #667eea;
@@ -281,26 +285,14 @@
       <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;">
         <div class="group">
           <div class="group-title">
-            <span class="dot" style="background:#667eea;"></span> 显示范围
+            <span class="dot" style="background:#f39c12;"></span> 桨叶组名字和颜色
           </div>
           <div class="row">
-            <div class="field">
-              <label>坐标轴最大刻度（半径）</label>
-              <input type="number" id="rangeMax" value="1" step="0.1" min="0.1">
-            </div>
-          </div>
-        </div>
-
-        <div class="group">
-          <div class="group-title">
-            <span class="dot" style="background:#f39c12;"></span> V组颜色
-          </div>
-          <div class="row">
-            <div class="field"><label>V</label><input type="color" id="colorV" value="#f39c12"></div>
-            <div class="field"><label>V1</label><input type="color" id="colorV1" value="#fad7a0"></div>
-            <div class="field"><label>V2</label><input type="color" id="colorV2" value="#fad7a0"></div>
-            <div class="field"><label>V3</label><input type="color" id="colorV3" value="#f39c12"></div>
-            <div class="field"><label>V4</label><input type="color" id="colorV4" value="#f39c12"></div>
+            <div class="field"><label>桨叶1</label><input type="text" id="nameV" value="桨叶1"><input type="color" id="colorV" value="#f39c12"></div>
+            <div class="field"><label>桨叶2</label><input type="text" id="nameV1" value="桨叶2"><input type="color" id="colorV1" value="#fad7a0"></div>
+            <div class="field"><label>桨叶3</label><input type="text" id="nameV2" value="桨叶3"><input type="color" id="colorV2" value="#fad7a0"></div>
+            <div class="field"><label>桨叶4</label><input type="text" id="nameV3" value="桨叶4"><input type="color" id="colorV3" value="#f39c12"></div>
+            <div class="field"><label>桨叶5</label><input type="text" id="nameV4" value="桨叶5"><input type="color" id="colorV4" value="#f39c12"></div>
           </div>
         </div>
 
@@ -324,7 +316,11 @@
     const inputColorV2 = document.getElementById('colorV2');
     const inputColorV3 = document.getElementById('colorV3');
     const inputColorV4 = document.getElementById('colorV4');
-    const inputRangeMax = document.getElementById('rangeMax');
+    const inputNameV = document.getElementById('nameV');
+    const inputNameV1 = document.getElementById('nameV1');
+    const inputNameV2 = document.getElementById('nameV2');
+    const inputNameV3 = document.getElementById('nameV3');
+    const inputNameV4 = document.getElementById('nameV4');
 
     const dpr = window.devicePixelRatio || 1;
 
@@ -354,12 +350,17 @@
       return String(r);
     }
 
+    function vLabel(input, fallback) {
+      const t = input.value.trim();
+      return t ? t : fallback;
+    }
+
     function draw() {
       const w = canvas.width;
       const h = canvas.height;
       const cx = w / 2 + offsetX;
       const cy = h / 2 + offsetY;
-      const rangeMax = Math.max(0.1, parseFloat(inputRangeMax.value) || 1);
+      const rangeMax = 1; // 坐标轴最大刻度半径（固定）
       const scale = (Math.min(w, h) / 2) / (rangeMax * 1.2) * zoom;
 
       ctx.clearRect(0, 0, w, h);
@@ -435,7 +436,8 @@
       // B−A（减重时反向）从原点画出
       const diffEndX = cx + dx;
       const diffEndY = cy + dy;
-      drawVector(cx, cy, diffEndX, diffEndY, inputColorV.value, 'V', diffLen, diffAng, 3);
+      const nameV = vLabel(inputNameV, '桨叶1');
+      drawVector(cx, cy, diffEndX, diffEndY, inputColorV.value, nameV, diffLen, diffAng, 3);
 
       // A 的反向量（虚线）
       const valA = parseFloat(inputValA.value) || 0;
@@ -450,22 +452,23 @@
 
       // 构建 V, V1~V4 向量列表，归一化角度到 [0, 360)
       const allV = [];
+      const vNames = [null, vLabel(inputNameV1, '桨叶2'), vLabel(inputNameV2, '桨叶3'), vLabel(inputNameV3, '桨叶4'), vLabel(inputNameV4, '桨叶5')];
+      const vColors = [null, inputColorV1.value, inputColorV2.value, inputColorV3.value, inputColorV4.value];
       // V
       allV.push({
         ang: ((diffAng % 360) + 360) % 360,
         ex: diffEndX, ey: diffEndY,
-        color: inputColorV.value, label: 'V'
+        color: inputColorV.value, label: nameV, isMain: true
       });
       // V1~V4
-      const vColors = [null, inputColorV1.value, inputColorV2.value, inputColorV3.value, inputColorV4.value];
       for (let i = 1; i <= 4; i++) {
         const ang = diffAng - 72 * i;
         const normAng = ((ang % 360) + 360) % 360;
         const rad = degToRad(ang);
         const ex = cx + diffLen * Math.cos(rad) * scale;
         const ey = cy - diffLen * Math.sin(rad) * scale;
-        allV.push({ ang: normAng, ex, ey, color: vColors[i], label: `V${i}` });
-        drawArrowOnly(cx, cy, ex, ey, vColors[i], `V${i}`, 3);
+        allV.push({ ang: normAng, ex, ey, color: vColors[i], label: vNames[i], isMain: false });
+        drawArrowOnly(cx, cy, ex, ey, vColors[i], vNames[i], 3);
       }
 
       // 按角度排序
@@ -548,7 +551,7 @@
 
       // 文字标注统一在最上层绘制
       for (const l of labels) {
-        drawLabel(l.text, l.x, l.y, l.color, l.fontPx, l.bold);
+        drawLabel(l.text, l.x, l.y, l.fontPx, l.bold);
       }
 
       // 更新信息栏
@@ -575,6 +578,7 @@
         mode: inputGramsMode.value,
         modeLabel: inputGramsMode.value === 'remove' ? '减重' : '增重',
         diffLen, diffAng: ((diffAng % 360) + 360) % 360,
+        vName: nameV,
         negAng, negAngNorm,
         v1Label: v1.label, v1Ang: v1.ang,
         v2Label: v2.label, v2Ang: v2.ang,
@@ -583,7 +587,7 @@
       };
     }
 
-    function drawLabel(text, x, y, color, fontPx, bold) {
+    function drawLabel(text, x, y, fontPx, bold) {
       const fs = fontPx * dpr;
       ctx.font = `${bold ? 'bold ' : ''}${fs}px sans-serif`;
       ctx.textAlign = 'center';
@@ -592,9 +596,10 @@
       const h = fs * 1.2;
       const padX = 5 * dpr;
       const padY = 3 * dpr;
+      // 标注统一用深灰文字 + 白底，颜色区分交给向量线条本身
       ctx.fillStyle = 'rgba(255,255,255,0.72)';
       ctx.fillRect(x - w / 2 - padX, y - h / 2 - padY, w + 2 * padX, h + 2 * padY);
-      ctx.fillStyle = color;
+      ctx.fillStyle = '#333';
       ctx.fillText(text, x, y);
     }
 
@@ -615,7 +620,7 @@
       const midAng = startAng + delta / 2;
       const lx = cx + (r + 10 * dpr) * Math.cos(midAng);
       const ly = cy + (r + 10 * dpr) * Math.sin(midAng);
-      labels.push({ text: `${deg.toFixed(1)}°`, x: lx, y: ly, color: color, fontPx: 9, bold: false });
+      labels.push({ text: `${deg.toFixed(1)}°`, x: lx, y: ly, fontPx: 9, bold: false });
     }
 
     function getEndpoint(valStr, angStr, scale, cx, cy) {
@@ -661,7 +666,7 @@
       const labelDist = 16 * dpr;
       const lx = ex + labelDist * Math.cos(baseAngle);
       const ly = ey + labelDist * Math.sin(baseAngle);
-      labels.push({ text: label, x: lx, y: ly, color: color, fontPx: 13, bold: true });
+      labels.push({ text: label, x: lx, y: ly, fontPx: 13, bold: true });
 
       // 数值标注（画在向量中间偏上）
       const midX = (sx + ex) * 0.5;
@@ -669,7 +674,7 @@
       const tagX = -10 * dpr * Math.sin(baseAngle);
       const tagY = -10 * dpr * Math.cos(baseAngle);
       const angNorm = ((ang % 360) + 360) % 360;
-      labels.push({ text: `|${label}|=${val.toFixed(1)} IPs  ${angNorm.toFixed(1)}°`, x: midX + tagX, y: midY + tagY, color: '#666', fontPx: 10, bold: false });
+      labels.push({ text: `|${label}|=${val.toFixed(1)} IPs  ${angNorm.toFixed(1)}°`, x: midX + tagX, y: midY + tagY, fontPx: 10, bold: false });
     }
 
     function drawArrowOnly(sx, sy, ex, ey, color, label, lw) {
@@ -703,7 +708,7 @@
         const labelDist = 16 * dpr;
         const lx = ex + labelDist * Math.cos(baseAngle);
         const ly = ey + labelDist * Math.sin(baseAngle);
-        labels.push({ text: label, x: lx, y: ly, color: color, fontPx: 12, bold: true });
+        labels.push({ text: label, x: lx, y: ly, fontPx: 12, bold: true });
       }
     }
 
@@ -713,12 +718,12 @@
       const steps = [
         { t: '输入',
           v: `第一次：大小 ${d.valA} IPs，方向 ${d.angA}°<br>第二次：大小 ${d.valB} IPs，方向 ${d.angB}°<br>克数 = ${d.gramsB}` },
-        { t: d.mode === 'remove' ? '1. V = 第一次 − 第二次（减重）' : '1. V = 第二次 − 第一次',
-          v: `V 长度 = ${d.diffLen.toFixed(2)} IPs，V 方向 = ${d.diffAng.toFixed(1)}°` },
+        { t: d.mode === 'remove' ? `1. ${d.vName} = 第一次 − 第二次（减重）` : `1. ${d.vName} = 第二次 − 第一次`,
+          v: `${d.vName} 长度 = ${d.diffLen.toFixed(2)} IPs，${d.vName} 方向 = ${d.diffAng.toFixed(1)}°` },
         { t: '2. 反向第一次 P',
           v: `方向 = ${d.negAng.toFixed(1)}°，大小 = ${d.valA} IPs` },
-        { t: '3. V1 ~ V4',
-          v: d.allV.filter(x => x.label !== 'V').map(x => `${x.label} = ${x.ang.toFixed(1)}°`).join('，') },
+        { t: '3. 桨叶2 ~ 桨叶5',
+          v: d.allV.filter(x => !x.isMain).map(x => `${x.label} = ${x.ang.toFixed(1)}°`).join('，') },
         { t: '4. P 挨着哪两根',
           v: `P 方向 = ${d.negAngNorm.toFixed(1)}°，落在 ${d.v1Label}(${d.v1Ang.toFixed(1)}°) 和 ${d.v2Label}(${d.v2Ang.toFixed(1)}°) 之间` },
         { t: '5. 力的分解',
@@ -750,7 +755,7 @@
 
     window.addEventListener('resize', resize);
 
-    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputGramsMode, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4, inputRangeMax];
+    const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputGramsMode, inputNameV, inputNameV1, inputNameV2, inputNameV3, inputNameV4, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4];
 
     // 从 localStorage 恢复所有值
     allInputs.forEach(el => {
