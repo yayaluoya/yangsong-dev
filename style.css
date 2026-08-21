@@ -57,6 +57,16 @@ canvas {
   color: #f39c12;
   font-weight: 700;
   font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vl-blade {
+  width: 14px;
+  height: 9px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
 }
 
 .controls {

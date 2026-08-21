@@ -51,6 +51,25 @@ function vLabel(input, fallback) {
   return t ? t : fallback;
 }
 
+// 信息栏小桨叶图标：用 SVG 画一个与画布桨叶形状一致的叶片，颜色与对应桨叶相同
+let bladeIconSeq = 0;
+function bladeIcon(color) {
+  const gid = 'bladeGrad' + (bladeIconSeq++);
+  return `<svg class="vl-blade" viewBox="0 0 22 14" aria-hidden="true">
+    <defs>
+      <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="rgba(255,255,255,0.35)"/>
+        <stop offset="0.5" stop-color="rgba(255,255,255,0)"/>
+        <stop offset="1" stop-color="rgba(0,0,0,0.18)"/>
+      </linearGradient>
+    </defs>
+    <path d="M1 7 C6 1.5 11 1.5 17 4 A3 3 0 0 1 17 10 C11 12.5 6 12.5 1 7 Z"
+      fill="${color}" stroke="rgba(0,0,0,0.15)" stroke-width="0.5"/>
+    <path d="M1 7 C6 1.5 11 1.5 17 4 A3 3 0 0 1 17 10 C11 12.5 6 12.5 1 7 Z"
+      fill="url(#${gid})"/>
+  </svg>`;
+}
+
 function draw() {
   const w = canvas.width;
   const h = canvas.height;
@@ -208,8 +227,8 @@ function draw() {
   const proj1 = (Px * dx1 + Py * dy1) / len1 / scale;
   const proj2 = (Px * dx2 + Py * dy2) / len2 / scale;
 
-  projLengths.push({ label: v1.label, val: k1, proj: proj1 });
-  projLengths.push({ label: v2.label, val: k2, proj: proj2 });
+  projLengths.push({ label: v1.label, color: v1.color, val: k1, proj: proj1 });
+  projLengths.push({ label: v2.label, color: v2.color, val: k2, proj: proj2 });
 
   // 绘制两个分量向量
   const comp1EndX = cx + k1_px * ux;
@@ -255,12 +274,12 @@ function draw() {
   const gMul = diffLen > 0 ? gramsB / diffLen : 0;
   let infoHTML = `<table class="info-table"><tr>`;
   for (const p of projLengths) {
-    infoHTML += `<td>分解 反向第一次→<span class="vl">${p.label}</span>: <b>${(p.val * gMul).toFixed(1)} g</b></td>`;
+    infoHTML += `<td>分解 反向第一次→<span class="vl">${bladeIcon(p.color)}${p.label}</span>: <b>${(p.val * gMul).toFixed(1)} g</b></td>`;
   }
   infoHTML += `</tr><tr>`;
   for (const p of projLengths) {
     const ang = Math.acos(Math.max(-1, Math.min(1, p.proj / valA))) * 180 / Math.PI;
-    infoHTML += `<td>夹角 反向第一次→<span class="vl">${p.label}</span>: <b>${ang.toFixed(1)}°</b></td>`;
+    infoHTML += `<td>夹角 反向第一次→<span class="vl">${bladeIcon(p.color)}${p.label}</span>: <b>${ang.toFixed(1)}°</b></td>`;
   }
   infoHTML += `</tr></table>`;
   document.getElementById('infoBar').innerHTML = infoHTML;
