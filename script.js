@@ -449,17 +449,43 @@ let bladeNoise = null;
 function bladeNoisePattern() {
   if (bladeNoise) return bladeNoise;
   const size = 128;
+  const gridN = 8; // 晶格数：越小颗粒越粗，越大越细
   const nc = document.createElement('canvas');
   nc.width = size;
   nc.height = size;
   const nctx = nc.getContext('2d');
   const data = nctx.createImageData(size, size);
-  for (let i = 0; i < data.data.length; i += 4) {
-    const v = (Math.random() * 255) | 0;
-    data.data[i] = v;
-    data.data[i + 1] = v;
-    data.data[i + 2] = v;
-    data.data[i + 3] = (Math.random() * 255) | 0;
+
+  // 可平铺的 value noise：整数晶格哈希 + smoothstep 插值，得到柔和的云状颗粒，
+  // 边缘无缝，比逐像素纯随机更接近真实材质、不再像雪花噪点
+  const hash = (ix, iy) => {
+    const wx = ((ix % gridN) + gridN) % gridN;
+    const wy = ((iy % gridN) + gridN) % gridN;
+    let n = wx * 374761393 + wy * 668265263;
+    n = (n ^ (n >> 13)) * 1274126177;
+    return ((n ^ (n >> 16)) >>> 0) / 4294967295;
+  };
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const fx = (x / size) * gridN;
+      const fy = (y / size) * gridN;
+      const x0 = Math.floor(fx), y0 = Math.floor(fy);
+      const tx = fx - x0, ty = fy - y0;
+      const sx = tx * tx * (3 - 2 * tx); // smoothstep
+      const sy = ty * ty * (3 - 2 * ty);
+      const v00 = hash(x0, y0);
+      const v10 = hash(x0 + 1, y0);
+      const v01 = hash(x0, y0 + 1);
+      const v11 = hash(x0 + 1, y0 + 1);
+      const v = (v00 * (1 - sx) + v10 * sx) * (1 - sy) + (v01 * (1 - sx) + v11 * sx) * sy;
+      const g = (v * 255) | 0;
+      const idx = (y * size + x) * 4;
+      data.data[idx] = g;
+      data.data[idx + 1] = g;
+      data.data[idx + 2] = g;
+      data.data[idx + 3] = 255; // 不透明度固定，浓淡靠 globalAlpha 控制
+    }
   }
   nctx.putImageData(data, 0, 0);
   bladeNoise = ctx.createPattern(nc, 'repeat');
@@ -529,9 +555,10 @@ function drawBlade(sx, sy, ex, ey, color, label) {
   ctx.fillStyle = g;
   ctx.fill();
 
-  // 噪点叠加：随机颗粒打破纯色的生硬感
+  // 噪点叠加：柔和颗粒打破纯色的生硬感，用 soft-light 混合只调制明暗、不破坏颜色
   ctx.save();
-  ctx.globalAlpha = 0.15;
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.globalAlpha = 0.4;
   ctx.fillStyle = bladeNoisePattern();
   ctx.fill();
   ctx.restore();
