@@ -112,8 +112,8 @@ function draw() {
   drawVector(cx, cy, a.x, a.y, '#e74c3c', '第一次', parseFloat(inputValA.value) || 0, parseFloat(inputAngA.value) || 0, 1.5);
   // 画向量 B
   drawVector(cx, cy, b.x, b.y, '#2ecc71', '第二次', parseFloat(inputValB.value) || 0, parseFloat(inputAngB.value) || 0, 1.5);
-  // 虚线连接 A 末端到 B 末端，展示几何关系
-  // 增重/减重：减重时把 V = B−A 反向（即 A−B）
+  // 虚线连接第一次(A)末端到第二次(B)末端，展示几何关系
+  // 由第一次、第二次向量确定 V1：增重 = 第二次−第一次，减重 = 反向（第一次−第二次）
   const modeSign = inputGramsMode.value === 'remove' ? -1 : 1;
   const dx = (b.x - a.x) * modeSign;
   const dy = (b.y - a.y) * modeSign;
@@ -129,7 +129,7 @@ function draw() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // B−A（减重时反向）从原点画出
+  // V1（减重时反向）从原点画出
   const diffEndX = cx + dx;
   const diffEndY = cy + dy;
   const nameV = vLabel(inputNameV, '桨叶1');
@@ -146,17 +146,17 @@ function draw() {
   drawVector(cx, cy, negX, negY, '#e74c3c', '反向第一次', valA, negAng, 1.5);
   ctx.setLineDash([]);
 
-  // 构建 V, V1~V4 向量列表，归一化角度到 [0, 360)
+  // 构建 V1~V5 向量列表：V1 由两次输入确定，V2~V5 为 V1 依次旋转 72° 得到；角度归一化到 [0, 360)
   const allV = [];
   const vNames = [null, vLabel(inputNameV1, '桨叶2'), vLabel(inputNameV2, '桨叶3'), vLabel(inputNameV3, '桨叶4'), vLabel(inputNameV4, '桨叶5')];
   const vColors = [null, inputColorV1.value, inputColorV2.value, inputColorV3.value, inputColorV4.value];
-  // V
+  // V1（主向量，由第一次、第二次输入确定）
   allV.push({
     ang: ((diffAng % 360) + 360) % 360,
     ex: diffEndX, ey: diffEndY,
     color: inputColorV.value, label: nameV, isMain: true
   });
-  // V1~V4
+  // V2~V5：V1 依次旋转 72°（第 i 根旋转 i×72°）得到
   for (let i = 1; i <= 4; i++) {
     const ang = diffAng - 72 * i;
     const normAng = ((ang % 360) + 360) % 360;
