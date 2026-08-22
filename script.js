@@ -37,6 +37,12 @@ function resize() {
   draw();
 }
 
+// 监听画布容器尺寸变化（信息栏内容填充、窗口变化等），自动重设画布尺寸，
+// 避免画布尺寸与容器实际尺寸脱节，导致底部留白或内容被裁剪
+if (window.ResizeObserver) {
+  new ResizeObserver(resize).observe(canvas.parentElement);
+}
+
 function degToRad(deg) {
   return (deg * Math.PI) / 180;
 }
@@ -272,14 +278,14 @@ function draw() {
   // 更新信息栏
   const gramsB = parseFloat(inputGramsB.value) || 0;
   const gMul = diffLen > 0 ? gramsB / diffLen : 0;
-  let infoHTML = `<table class="info-table"><tr>`;
+  let infoHTML = `<div class="info-title">结果</div><table class="info-table"><tr>`;
   for (const p of projLengths) {
-    infoHTML += `<td>分解 反向第一次→<span class="vl">${bladeIcon(p.color)}${p.label}</span>: <b>${(p.val * gMul).toFixed(1)} g</b></td>`;
+    infoHTML += `<td>分解→<span class="vl">${bladeIcon(p.color)}${p.label}</span>: <b>${(p.val * gMul).toFixed(1)} g</b></td>`;
   }
   infoHTML += `</tr><tr>`;
   for (const p of projLengths) {
     const ang = Math.acos(Math.max(-1, Math.min(1, p.proj / valA))) * 180 / Math.PI;
-    infoHTML += `<td>夹角 反向第一次→<span class="vl">${bladeIcon(p.color)}${p.label}</span>: <b>${ang.toFixed(1)}°</b></td>`;
+    infoHTML += `<td>夹角→<span class="vl">${bladeIcon(p.color)}${p.label}</span>: <b>${ang.toFixed(1)}°</b></td>`;
   }
   infoHTML += `</tr></table>`;
   document.getElementById('infoBar').innerHTML = infoHTML;
