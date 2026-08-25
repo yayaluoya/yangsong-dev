@@ -647,7 +647,7 @@ function resetView() {
 }
 
 function clampZoom(z) {
-  return Math.min(10, Math.max(0.1, z));
+  return Math.min(30, Math.max(0.1, z));
 }
 
 function zoomAt(factor, x, y) {
