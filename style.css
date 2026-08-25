@@ -114,6 +114,10 @@ canvas {
   gap: 8px;
 }
 
+.group .row + .row {
+  margin-top: 8px;
+}
+
 .field {
   flex: 1;
 }
