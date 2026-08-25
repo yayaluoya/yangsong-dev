@@ -7,6 +7,7 @@ const inputValB = document.getElementById('valB');
 const inputAngB = document.getElementById('angB');
 const inputGramsB = document.getElementById('gramsB');
 const inputGramsMode = document.getElementById('gramsMode');
+const inputGramsBlade = document.getElementById('gramsBlade');
 const inputColorV = document.getElementById('colorV');
 const inputColorV1 = document.getElementById('colorV1');
 const inputColorV2 = document.getElementById('colorV2');
@@ -55,6 +56,16 @@ function fmtTick(v) {
 function vLabel(input, fallback) {
   const t = input.value.trim();
   return t ? t : fallback;
+}
+
+// 同步桨叶选择器选项：选项文案跟随设置里的 5 个桨叶名字，value 用稳定索引 0~4
+function syncBladeOptions() {
+  const names = [inputNameV, inputNameV1, inputNameV2, inputNameV3, inputNameV4];
+  const prev = inputGramsBlade.value;
+  inputGramsBlade.innerHTML = names.map((el, i) =>
+    `<option value="${i}">${vLabel(el, `桨叶${i + 1}`)}</option>`
+  ).join('');
+  if (prev) inputGramsBlade.value = prev;
 }
 
 // 信息栏小桨叶图标：用 SVG 画一个与画布桨叶形状一致的叶片，颜色与对应桨叶相同
@@ -154,11 +165,8 @@ function draw() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // V1 桨叶（减重时反向）从原点画出
-  const diffEndX = cx + dx;
-  const diffEndY = cy + dy;
-  const nameV = vLabel(inputNameV, '桨叶1');
-  drawBlade(cx, cy, diffEndX, diffEndY, inputColorV.value, nameV);
+  // 主桨叶 = 第二次选择的桨叶，差值向量（减重时反向）从原点画出
+  const bladeIndex = parseInt(inputGramsBlade.value, 10) || 0;
 
   // A 的反向量（虚线）
   const valA = parseFloat(inputValA.value) || 0;
@@ -171,25 +179,23 @@ function draw() {
   drawVector(cx, cy, negX, negY, '#e74c3c', '反向第一次', valA, negAng, 1.5);
   ctx.setLineDash([]);
 
-  // 构建 V1~V5 向量列表：V1 由两次输入确定，V2~V5 为 V1 依次旋转 72° 得到；角度归一化到 [0, 360)
+  // 5 片桨叶的名字和颜色（索引 0~4 对应桨叶1~桨叶5）
+  const bNames = [vLabel(inputNameV, '桨叶1'), vLabel(inputNameV1, '桨叶2'), vLabel(inputNameV2, '桨叶3'), vLabel(inputNameV3, '桨叶4'), vLabel(inputNameV4, '桨叶5')];
+  const bColors = [inputColorV.value, inputColorV1.value, inputColorV2.value, inputColorV3.value, inputColorV4.value];
+  const nameV = bNames[bladeIndex];
+
+  // 构建 V1~V5：选中的桨叶方向 = diffAng，其余按 72° 顺时针排列；角度归一化到 [0, 360)
   const allV = [];
-  const vNames = [null, vLabel(inputNameV1, '桨叶2'), vLabel(inputNameV2, '桨叶3'), vLabel(inputNameV3, '桨叶4'), vLabel(inputNameV4, '桨叶5')];
-  const vColors = [null, inputColorV1.value, inputColorV2.value, inputColorV3.value, inputColorV4.value];
-  // V1（主向量，由第一次、第二次输入确定）
-  allV.push({
-    ang: ((diffAng % 360) + 360) % 360,
-    ex: diffEndX, ey: diffEndY,
-    color: inputColorV.value, label: nameV, isMain: true
-  });
-  // V2~V5：V1 依次旋转 72°（第 i 根旋转 i×72°）得到
-  for (let i = 1; i <= 4; i++) {
-    const ang = diffAng - 72 * i;
+  for (let i = 0; i < 5; i++) {
+    const offset = (i - bladeIndex + 5) % 5;
+    const ang = diffAng - 72 * offset;
     const normAng = ((ang % 360) + 360) % 360;
     const rad = degToRad(ang);
     const ex = cx + diffLen * Math.cos(rad) * scale;
     const ey = cy - diffLen * Math.sin(rad) * scale;
-    allV.push({ ang: normAng, ex, ey, color: vColors[i], label: vNames[i], isMain: false });
-    drawBlade(cx, cy, ex, ey, vColors[i], vNames[i]);
+    const isMain = (i === bladeIndex);
+    allV.push({ ang: normAng, ex, ey, color: bColors[i], label: bNames[i], isMain });
+    drawBlade(cx, cy, ex, ey, bColors[i], bNames[i]);
   }
 
   // 按角度排序
@@ -588,7 +594,7 @@ function showCalc() {
       v: `${d.vName} 长度 = ${d.diffLen.toFixed(2)} IPs，${d.vName} 方向 = ${d.diffAng.toFixed(1)}°` },
     { t: '2. 反向第一次 P',
       v: `方向 = ${d.negAng.toFixed(1)}°，大小 = ${d.valA} IPs` },
-    { t: '3. 桨叶2 ~ 桨叶5',
+    { t: '3. 其余桨叶',
       v: d.allV.filter(x => !x.isMain).map(x => `${x.label} = ${x.ang.toFixed(1)}°`).join('，') },
     { t: '4. P 挨着哪两根',
       v: `P 方向 = ${d.negAngNorm.toFixed(1)}°，落在 ${d.v1Label}(${d.v1Ang.toFixed(1)}°) 和 ${d.v2Label}(${d.v2Ang.toFixed(1)}°) 之间` },
@@ -621,13 +627,21 @@ function closeSettings(e) {
 
 window.addEventListener('resize', resize);
 
-const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputGramsMode, inputNameV, inputNameV1, inputNameV2, inputNameV3, inputNameV4, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4];
+const allInputs = [inputValA, inputAngA, inputValB, inputAngB, inputGramsB, inputGramsMode, inputGramsBlade, inputNameV, inputNameV1, inputNameV2, inputNameV3, inputNameV4, inputColorV, inputColorV1, inputColorV2, inputColorV3, inputColorV4];
 
-// 从 localStorage 恢复所有值
+// 从 localStorage 恢复所有值（桨叶选择器的选项尚未生成，稍后单独恢复）
 allInputs.forEach(el => {
+  if (el.id === 'gramsBlade') return;
   const saved = localStorage.getItem('vec-' + el.id);
   if (saved) el.value = saved;
 });
+
+// 生成桨叶选择器选项（跟随设置里的桨叶名字）
+syncBladeOptions();
+
+// 恢复桨叶选择器的选中值
+const savedBlade = localStorage.getItem('vec-gramsBlade');
+if (savedBlade) inputGramsBlade.value = savedBlade;
 
 allInputs.forEach(el => {
   el.addEventListener('input', () => {
@@ -636,6 +650,8 @@ allInputs.forEach(el => {
       el.value = '0';
     }
     localStorage.setItem('vec-' + el.id, el.value);
+    // 桨叶名字改变时，同步选择器选项文案
+    if (el.id.startsWith('name')) syncBladeOptions();
     draw();
   });
 });
@@ -647,7 +663,7 @@ function resetView() {
 }
 
 function clampZoom(z) {
-  return Math.min(10, Math.max(0.1, z));
+  return Math.min(30, Math.max(0.1, z));
 }
 
 function zoomAt(factor, x, y) {
